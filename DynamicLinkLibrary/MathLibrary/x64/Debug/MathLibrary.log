@@ -1,0 +1,6 @@
+﻿  pch.cpp
+  dllmain.cpp
+  MathLibrary.cpp
+  Generating Code...
+     Creating library D:\DEV\cppguides\DynamicLinkLibrary\x64\Debug\MathLibrary.lib and object D:\DEV\cppguides\DynamicLinkLibrary\x64\Debug\MathLibrary.exp
+  MathLibrary.vcxproj -> D:\DEV\cppguides\DynamicLinkLibrary\x64\Debug\MathLibrary.dll
