@@ -50,3 +50,5 @@ xcopy /y /d "..\..\MathLibrary\$(IntDir)MathLibrary.dll" "$(OutDir)"
 ```
 
 If your DLL and client projects are in other directories, change the relative path to the DLL to match.
+
+[More Info](https://learn.microsoft.com/en-us/cpp/build/walkthrough-creating-and-using-a-dynamic-link-library-cpp?view=msvc-170)
