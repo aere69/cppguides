@@ -25,4 +25,6 @@ int main(int, char **){
             struct_pool.deallocate(s_ret);
         }
     }
+
+    return 0;
 }
