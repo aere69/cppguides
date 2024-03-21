@@ -12,6 +12,7 @@
 namespace Common {
     constexpr size_t LOGS_QUEUE_SIZE = 8 * 1024 * 1024;
 
+    //The different types to be logged
     enum class LogType : int8_t {
         CHAR = 0,
         INTEGER = 1,
@@ -24,6 +25,7 @@ namespace Common {
         DOUBLE = 8
     };
 
+    //Define the value to be pushed to the Queue
     struct LogElement {
         LogType type_ = LogType::CHAR;
         union {
@@ -49,6 +51,10 @@ namespace Common {
             std::thread *logger_thread_ = nullptr;
 
         public :
+            //Empty the queue of log data and write to file.
+            // While running_ is true :
+            // - consume any new element in the queue
+            // - write the element to the file
             auto flushQueue() noexcept {
                 while (running_) {
                     for (auto next = queue_.getNextToRead(); queue_.size() && next; next = queue_.getNextToRead()) {
@@ -85,16 +91,23 @@ namespace Common {
                     }
                     file_.flush();
 
+                    // Queue is empty -> wait for 10ms and try again
                     using namespace std::literals::chrono_literals;
                     std::this_thread::sleep_for(10ms);
                 }
             }
 
+            //Initialize the queue with the propper size, and filename to disk
             explicit Logger(const std::string &file_name)
-                : file_name_(file_name), queue_(LOG_QUEUE_SIZE) {
+                    : file_name_(file_name), queue_(LOG_QUEUE_SIZE) {
+                //Open Filename
                 file_.open(file_name);
+                //On error Die!
                 ASSERT(file_.is_open(), "Could not open log file:" + file_name);
+                //Create and launch the logger (queue) thread.
+                // -1 to not set CPU affinity
                 logger_thread_ = createAndStartThread(-1, "Common/Logger " + file_name_, [this]() { flushQueue(); });
+                //On error Die!
                 ASSERT(logger_thread_ != nullptr, "Failed to start Logger thread.");
             }
 
@@ -102,17 +115,23 @@ namespace Common {
                 std::string time_str;
                 std::cerr << Common::getCurrentTimeStr(&time_str) << " Flushing and closing Logger for " << file_name_ << std::endl;
 
+                // Wait until the queue is empty
                 while (queue_.size()) {
                     using namespace std::literals::chrono_literals;
                     std::this_thread::sleep_for(1s);
                 }
+
+                //Set running_ to false to stop FlushQueue()
                 running_ = false;
+                //Wait for the longer thread to finish execution.
                 logger_thread_->join();
 
                 file_.close();
                 std::cerr << Common::getCurrentTimeStr(&time_str) << " Logger for " << file_name_ << " exiting." << std::endl;
             }
 
+            //Overloaded methods to Push data to the Queue
+            //Writes to the next location of the queue and increments write index
             auto pushValue(const LogElement &log_element) noexcept {
                 *(queue_.getNextToWriteTo()) = log_element;
                 queue_.updateWriteIndex();
@@ -165,6 +184,8 @@ namespace Common {
                 pushValue(value.c_str());
             }
 
+            //Method similar to printf() with % as placeholder.
+            //i.e. log("Integer:% String:% Double:%", int_val, str_val, dbl_val);
             template<typename T, typename... A>
             auto log(const char *s, const T &value, A... args) noexcept {
                 while (*s) {
@@ -183,6 +204,7 @@ namespace Common {
             }
 
             // note that this is overloading not specialization. gcc does not allow inline specializations.
+            // Handle the case when no arguments are passed
             auto log(const char *s) noexcept {
                 while (*s) {
                     if (*s == '%') {
